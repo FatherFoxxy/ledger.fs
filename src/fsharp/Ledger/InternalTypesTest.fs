@@ -12,16 +12,16 @@ open PersistentCollections
 type ``Test Internal Types`` () =
     [<Test>]
     member test.``splitAccountName.`` () =
-        splitAccountName (InputName "Expenses:BankFees:AccountServiceFee")
-        |> should equal [{Canonical = (Canonical "EXPENSE"); Input = (Input "Expenses");};
-                         {Canonical = (Canonical "BANKFEES"); Input = (Input "BankFees");};
-                         {Canonical = (Canonical "ACCOUNTSERVICEFEE"); Input = (Input "AccountServiceFee");}]
+        splitAccountName (InputName(Entity "TEST_ENTITY", "Expenses:BankFees:AccountServiceFee"))
+        |> should equal [{Canonical = (Canonical "EXPENSE"); Input = (InputName(Entity "TEST_ENTITY", "Expenses"));};
+                         {Canonical = (Canonical "BANKFEES"); Input = (InputName(Entity "TEST_ENTITY", "BankFees"));};
+                         {Canonical = (Canonical "ACCOUNTSERVICEFEE"); Input = (InputName(Entity "TEST_ENTITY", "AccountServiceFee"));}]
     [<Test>]
     member test.``Book posting to Account.``() =
         /// I think this might even work ... It did - on the first attempt.
         // It's a lot easier to write working code in F# than it is in python.
-        let a = Account(InputName "Assets")
-        let p = {Posting.account = (InputName "Assets:Bankwest:Cheque");
+        let a = Account(InputName(Entity "TEST_ENTITY", "Assets"))
+        let p = {Posting.account = (InputName(Entity "TEST_ENTITY", "Assets:Bankwest:Cheque"));
                  Posting.amount = AUD 100000;}
         let t = {Transaction.id = 1;
                  Transaction.date = "1999-12-31";
@@ -41,7 +41,7 @@ type ``Test Internal Types`` () =
     member test.``Book posting to Accounts.``() =
         /// And this also seems to work on first attempt.
         let a = Accounts()
-        let p = {Posting.account = (InputName "Assets:Bankwest:Cheque");
+        let p = {Posting.account = (InputName(Entity "TEST_ENTITY", "Assets:Bankwest:Cheque"));
                  Posting.amount = AUD 100000;}
         let t = {Transaction.id = 1;
                  Transaction.date = "1999-12-31";
@@ -64,9 +64,9 @@ type ``Test Internal Types`` () =
         let t = {Transaction.date = "2013-01-01";
                  description = "I began the year with $1000 in my cheque account.";
                  // NB: Top-level account "Asset" gets created as "ASSET_S_"
-                 postings = [{account = (InputName "Asset:Bankwest:Cheque");
+                 postings = [{account = (InputName(Entity "TEST_ENTITY", "Asset:Bankwest:Cheque"));
                               amount = AUD 100000;};
-                             {account = (InputName "Equity:OpeningBalances");
+                             {account = (InputName(Entity "TEST_ENTITY", "Equity:OpeningBalances"));
                               amount = AUD 100000;}];
              id=1}
         let detail0 = {posting=t.postings.[0];transaction=t}
