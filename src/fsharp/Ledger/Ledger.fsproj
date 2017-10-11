@@ -25,8 +25,10 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DocumentationFile>bin\Debug\Ledger.XML</DocumentationFile>
     <Prefer32Bit>true</Prefer32Bit>
-    <StartArguments>Little-Red-Hen.ledger chart-of-accounts</StartArguments>
-    <StartWorkingDirectory>C:\Users\mafm\Desktop\working-directories\family-taxes</StartWorkingDirectory>
+    <StartArguments>
+    </StartArguments>
+    <StartWorkingDirectory>
+    </StartWorkingDirectory>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
