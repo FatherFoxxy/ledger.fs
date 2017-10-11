@@ -27,10 +27,23 @@ let pMandatorySpace =
 let pOptionalSpace =
     (skipMany (anyOf nonEolWhiteSpace)) <?> "space"
 
+let pEntity =
+    let isEntityFirstChar c = isLetter c
+    let isEntityChar c = isLetter c || isDigit c || c = '-' || c = '_' || c = '.' //can't use '/' because that's our ending character
+    (many1Satisfy2L isEntityFirstChar isEntityChar "entity") .>>? skipString "/"
+
+let pOptEntity =
+     opt pEntity
+     |>> (fun optEntity -> 
+              match optEntity with 
+              | Some entity -> Entity entity 
+              | None -> Default)
+
 let pAccount =
-       let isAccountFirstChar c = isLetter c
-       let isAccountChar c = isLetter c || isDigit c || c = '-' || c = '_' || c = '/' || c = ':' || c = '.'
-       many1Satisfy2L isAccountFirstChar isAccountChar "account"
+    let isAccountFirstChar c = isLetter c
+    let isAccountChar c = isLetter c || isDigit c || c = '-' || c = '_' || c = '/' || c = ':' || c = '.'
+    pipe2 pOptEntity (many1Satisfy2L isAccountFirstChar isAccountChar "account")
+            (fun entity account -> InputName(entity, account))
 
 let pAudAmount =
     let isAudAmountFirstChar c = isDigit c || c = '-' || c = '$' || c = '+'
@@ -68,12 +81,12 @@ let pVerifyBalance =
           (pMandatorySpace >>. pAccount)
           (pMandatorySpace >>. pAmount .>> pOptionalSpace .>> newline)
         (fun date account amount -> BalanceVerfication { BalanceVerfication.date = date
-                                                         BalanceVerfication.account = (InputName account)
+                                                         BalanceVerfication.account = account
                                                          BalanceVerfication.amount = amount})
 let pPosting =
     pipe2 (pOptionalSpace >>. pAccount)
           (pMandatorySpace >>. pAmount .>> pOptionalSpace .>> newline)
-        (fun account amount -> { Posting.account = (InputName account);
+        (fun account amount -> { Posting.account = account;
                                  Posting.amount = amount})
 
 let pPostings =
