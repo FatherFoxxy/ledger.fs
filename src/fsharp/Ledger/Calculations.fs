@@ -31,6 +31,10 @@ type DateOrderCheck =
     | OK
     | Problem of previous: Transaction * next: Transaction
 
+type EntityVerification =
+    | EntityVerificationPassed
+    | UnbalancedEntities of AccountEntity list
+
 /// Check transactions are in date order. Give two problem transactions if not.
 let checkDateOrder (transactions : Transaction list) =
     let rec helper (previous : Transaction) (transactions : Transaction list) =
@@ -45,6 +49,47 @@ let checkDateOrder (transactions : Transaction list) =
         | [] -> DateOrderCheck.OK
         | (t :: tail) -> (helper t tail)
 
+/// This function will check a list of postings for an uneven number of the entities seen within
+/// for example:
+///
+/// Jacob/Expenses:Motor:Fuel   $58.01
+/// Liabilities:Bankwest:Visa   $58.01
+///
+/// Will result in the following function result:
+/// UnbalancedEntities [(Entity Jacob,true); (Default,true)]
+///
+/// Assuming that they do balanced, like so:
+/// Expenses:Motor:Fuel   $58.01
+/// Liabilities:Bankwest:Visa   $58.01
+///
+/// then the function will return EntityVerificationPassed. Perhaps there is a better way to check for the #
+/// such as keeping a running total and "modding" (%) by 2 to see if there is an even number of entities
+/// I'm keeping it like this because I think the concept of flipping "bits" is neat, although overcomplicated
+let verifyEntitiesInPostings (postings:Posting list) =
+    let errors = postings
+                 |> List.fold (fun (bins:(AccountEntity*bool) list) (elem:Posting) -> 
+                         let entity = elem.account.Entity
+                         let bin = bins |> List.tryFind (fst >> (=) entity)
+                         match bin with
+                         | Some b -> bins |> List.map (fun (entity,b) -> (entity,not b))
+                         | None -> (entity, true) :: bins) []
+                 |> List.filter (snd >> (=) true)
+                 |> List.map (fun (entity,b) -> entity)
+    match errors with
+    | [] -> EntityVerificationPassed
+    | _ -> UnbalancedEntities errors
+
+/// Performs verifyEntitiesInPostings of each transaction's postings in the supplied list
+/// It will then map the results into a tuple of (Transaction*EntityVerification List)
+/// This allows us to refer to the offending transaction in errors, as well as checking each
+/// transaction individually rather than checking the ENTIRE file for unbalanced entities
+/// this allows for a faster tracking of entity issues
+let verifyEntitiesInTransactions (transactions:Transaction list) =
+    transactions
+    |> List.map (fun transaction -> 
+                      (transaction, match verifyEntitiesInPostings transaction.postings with 
+                                    | EntityVerificationPassed -> [] 
+                                    | UnbalancedEntities entities -> entities))
 /// Is transaction unbalanced?
 let balance (t:Transaction) =
     let signedAmount (p: Posting) =
