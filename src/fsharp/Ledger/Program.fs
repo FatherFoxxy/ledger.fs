@@ -21,12 +21,14 @@
 /// This is a F# rewrite of almost the same thing in python:
 ///   https://github.com/mafm/ledger.py
 
+open FParsec
 open Parse
 open Calculations
 open InputTypes
 open InternalTypes
 open Misc
 open TextOutput
+open System
 
 open FormatExceptionForDisplay
 
@@ -74,7 +76,7 @@ let validateBalanceAssertions input =
                                                                 assertion.date 
                                                                 (Text.fmt assertion.amount) 
                                                                 (Text.fmt account.Balance))
-                                                  else None)
+                                             else None)
     if errors.Length <> 0 then
         errors
         |> List.iter nonFatal
@@ -92,6 +94,24 @@ let validate (input: InputFile) =
                                 after transaction dated %s\n\
                                 \t%s"
                                next.date next.description prev.date prev.description)
+    // the side effect of checking for balanced number of entities is single-transaction bills get caught too, though
+    // a monetary balance check would have the same result
+    let unbalancedEntities = 
+        transactions 
+        |> verifyEntitiesInTransactions
+
+    match unbalancedEntities with
+    | [] -> ()
+    | _ -> 
+        unbalancedEntities
+        |> List.iter (fun (entity,errors) -> 
+            errors
+            |> List.iter (fun error -> nonFatal (sprintf "Unbalanced number of entity \"%s\" in transaction \"%s %s\"" error.AsString entity.date entity.description))) 
+        fatal "Error in input file - unbalanced number of entities"
+
+    // it's very important that we check for balanced entities first, so that the balance checks will clear without checking the incorrect entities
+    // this prevents issues like unbalanced entities being considered in the balance. Perhaps this could be refactored later so that "unbalanced" verifies entities?
+    // it may even need to happen soon, depending on how adding multi-entity support goes for me
     match (List.filter unbalanced transactions) with
         | [] -> ()
         | unbalanced ->
@@ -161,34 +181,37 @@ let main argv =
     let input = (parseInputFile inputFileName)
     (validate input)
     let destination = ExcelOutput.destination(string arguments.["--excel-output"])
-
+    
     if (arguments.["running-balance"].IsTrue) then
-        let report = (ReportRegister.generateReport input (InputName (string arguments.["<account>"])))
-        (ReportRegister.printRegisterReport report)
-        ExcelOutput.Excel.write(report, destination)
-
+        match run (pAccount |>> fun acc -> acc) (string arguments.["<account>"]) with         
+        | Success(result, _, _) ->  
+              let report = (ReportRegister.generateReport input result)
+              (ReportRegister.printRegisterReport report)
+              ExcelOutput.Excel.write(report, destination)
+        | Failure(errorMessage, _, _) -> fatal errorMessage
+    
     if (arguments.["balances"].IsTrue) then
       let report = (ReportBalances.generateReport input)
       (ReportBalances.printBalanceReport report)
       ExcelOutput.Excel.write(report, destination)
-
+    
     if (arguments.["balances-by-date"].IsTrue) then
         if dates.Length < 1 then
             fatal("balances-by-date requires at least one date.")
         let report = (ReportBalancesByDate.generateReport input dates)
         (ReportBalancesByDate.printReport report)
         ExcelOutput.Excel.write(report, destination)
-
+    
     if (arguments.["chart-of-accounts"].IsTrue) then
         let report = (ReportChartOfAccounts.generateReport input)
         (ReportChartOfAccounts.printReport report)
         ExcelOutput.Excel.write(report, destination)
-
+    
     if (arguments.["transactions"].IsTrue) then
         let report = (ReportTransactionList.generateReport input firstDate lastDate)
         (ReportTransactionList.printReport report)
         ExcelOutput.Excel.write(report, destination)
-
+    
     if (arguments.["summary"].IsTrue) then
         if dates.Length < 1 then
             fatal("summary requires at least one date.")
@@ -198,12 +221,15 @@ let main argv =
         ExcelOutput.Excel.write((ReportBalancesByDate.generateReport input dates), destination)
         ExcelOutput.Excel.write((ReportChartOfAccounts.generateReport input), destination)
         ExcelOutput.Excel.write((ReportTransactionList.generateReport input None lastDate), destination)
-
+    
     ExcelOutput.save(destination)
     0
   with
     |  UnableToParseFile(filename, message) ->
         fatal(sprintf "Error parsing input file '%s' : %s" filename message)
+        -1
+    | :? EntityMismatch as e -> 
+        fatal(e.ToString)
         -1
     | :? System.IO.IOException as e ->
         fatal(sprintf "IO error: %s" e.Message)
