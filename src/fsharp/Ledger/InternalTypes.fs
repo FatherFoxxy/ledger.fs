@@ -23,11 +23,11 @@ let sign (accountType: AccountType) =
     | Equity -> -1
 
 /// Which of the five basic account types is this?
-let accountType (InputName name) =
+let accountType (InputName (entity,name)) =
     let components = name.ToUpper().Split(':') |> Array.toList
     let root = match components with
                     | root::tail -> root
-                    | _ -> raise (BadAccountNameException((InputName name), "Empty name"))
+                    | _ -> raise (BadAccountNameException((InputName (entity,name)), "Empty name"))
     match root with
     | "ASSET"       -> Asset
     | "ASSETS"      -> Asset
@@ -39,36 +39,33 @@ let accountType (InputName name) =
     | "EXPENSE"     -> Expense
     | "EXPENSES"    -> Expense
     | "EQUITY"      -> Equity
-    | _             -> raise (BadAccountNameException((InputName name), "Unable to determine account type"))
+    | _             -> raise (BadAccountNameException((InputName (entity,name)), "Unable to determine account type"))
 
 /// Do we have a valid account name?
 let validAccountName (a:InputNameAccount) =
     try
         match (accountType a) with _ -> true
     with BadAccountNameException(name, problem) -> false
-
+ 
 type CanonicalNameComponent = Canonical of string
-type InputNameComponent = Input of string
-    with
-        member this.AsInputName =
-            match this with (Input str) -> (InputName str)
 
 type AccountNameComponent = {
     Canonical: CanonicalNameComponent;
-    Input: InputNameComponent}
+    Input: InputNameAccount}
 
 type InternalNameAccount = AccountNameComponent list
 
 let toInputName (name: InternalNameAccount) : InputNameAccount =
+    let entity = name.[0].Input.Entity //XXX: There has to be a better way, perhaps we could even do away with this function completely??
     let rec helper (name: InternalNameAccount) =
         match name with
         | [] -> 
             ""
         | only::[] -> match (only.Input) with
-                            (Input only) -> only
+                            (InputName (entity,name)) -> name
         | first::rest -> match (first.Input) with
-                            (Input first) -> first + ":"+(helper rest)
-    (InputName (helper name))
+                            (InputName (entity,name)) -> name + ":" + (helper rest)
+    (InputName (entity, (helper name)))
 
 let canonicalRootName name =
     let accountType = accountType name
@@ -82,15 +79,15 @@ let canonicalRootName name =
 /// Break AccountName into ordered list of components.
 /// For each level of the account, we produce canonical & input components.
 /// Checkout out unit test for an example of what this does.
-let splitAccountName (InputName name) : InternalNameAccount =
+let splitAccountName (InputName (entity,name)) : InternalNameAccount =
         let components = name.Split(':') |> Array.toList
         let rec helper (components: string list) =
             match components with
             | [] -> []
-            | first::rest -> {Canonical = (Canonical (first.ToUpper())); Input = (Input first)} :: (helper rest)
+            | first::rest -> {Canonical = (Canonical (first.ToUpper())); Input = (InputName (entity,first))} :: (helper rest)
         match components with
-            | root::rest -> {Canonical = (canonicalRootName (InputName name)); Input = (Input root)} :: (helper rest)
-            | [] -> raise (BadAccountNameException((InputName name), "Empty name"))
+            | root::rest -> {Canonical = (canonicalRootName (InputName (entity,name))); Input = (InputName (entity,root))} :: (helper rest)
+            | [] -> raise (BadAccountNameException((InputName (entity,name), "Empty name")))
 
 
 type InputNameAccount 
@@ -102,8 +99,10 @@ type InputNameAccount
             | last :: _ -> last
             | [] -> raise (BadAccountNameException(this, "Empty account name"))
 
-let joinInputNames (InputName parentName) (Input childName) =
-    (InputName (parentName + ":" + childName))
+let joinInputNames (InputName (parentEntity,parentName)) (InputName (childEntity, childName)) =
+    if parentEntity <> childEntity then
+        raise (EntityMismatch ((InputName (parentEntity,parentName)),(InputName (childEntity, childName))))
+    else (InputName (parentEntity, parentName + ":" + childName))
 
 
 /// Canonical parts of splitAccountName

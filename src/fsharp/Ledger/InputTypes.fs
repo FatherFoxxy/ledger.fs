@@ -9,12 +9,37 @@
 type Date = string
 type Description = string
 
-type InputNameAccount = InputName of string
+type AccountName = string
+
+type AccountEntity = 
+    | Default 
+    | TEMPENTITY
+    | Entity of string
+    with
+    member this.AsString =
+        match this with
+        | Default -> "Default"
+        | TEMPENTITY -> "TEMPENTITY"
+        | Entity e -> e
+
+type InputNameAccount = InputName of (AccountEntity * AccountName)
     with
         member this.AsString =
-            match this with (InputName x) -> x
+            match this with (InputName (entity,name)) -> entity.AsString + "/" + name 
+        member this.Name =
+            match this with (InputName (entity,name)) -> name
+        member this.Entity =
+            match this with (InputName (entity,name)) -> entity
 
 exception BadAccountNameException of name: InputNameAccount * problem: string
+
+exception EntityMismatch of acc1:InputNameAccount * acc2:InputNameAccount
+    with
+        member this.ToString =
+            "Entity Mismatch: " + this.acc1.Entity.AsString + " <> " + this.acc2.Entity.AsString + "\r\n" +
+            "Additional Information: " + this.acc1.AsString + " <> " + this.acc2.AsString
+
+exception BadEntityNameException of name:InputNameAccount * problem: string
 
 type Amount =
     /// AUD amounts are stored as cents, and converted to dollars on input/output.
