@@ -61,7 +61,7 @@ let rec constructReportProfitAndLossLine (accounts : Account option List) (accou
                         | Some account -> account.Balance
                         | None -> zeroAmount)
                   accounts)
-    { Account = (InputName (Text.fmt accountTree.Name))
+    { Account = accountTree.Name.[0].Input //XXX: Ugh, I can't believe I keep doing this. There has to be a better way.......
       Amounts =
           { Differences = (differences balances) }
       SubAccounts =
@@ -81,8 +81,8 @@ let addLine (name: InputNameAccount) (accounts: DatedAccounts) (dates: Date list
 let generateReport (input: InputFile) (dates: Date list)  =
     let datedAccounts = (accountsByDate input dates)
     {Dates = dates;
-     Lines = (addLine (InputName "Income") datedAccounts dates
-             (addLine (InputName "Expenses") datedAccounts dates []))}
+     Lines = (addLine (InputName(TEMPENTITY, "Income")) datedAccounts dates
+             (addLine (InputName(TEMPENTITY, "Expenses")) datedAccounts dates []))}
 
 let rec printReportLine indent (line : Line) =
     for difference in line.Amounts.Differences do

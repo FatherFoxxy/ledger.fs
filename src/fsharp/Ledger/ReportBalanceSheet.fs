@@ -79,9 +79,9 @@ let addLine (name: InputNameAccount) (accounts: DatedAccounts) (dates: Date list
 let generateReport (input: InputFile) (dates: Date list)  =
     let datedAccounts = (accountsByDate input dates)
     { Dates = dates;
-      Lines = (addLine (InputName "Assets") datedAccounts dates
-              (addLine (InputName "Liabilities") datedAccounts dates
-              (addLine (InputName "Equity") datedAccounts dates [])))}
+      Lines = (addLine (InputName(Default, "Assets")) datedAccounts dates
+              (addLine (InputName(Default, "Liabilities")) datedAccounts dates
+              (addLine (InputName(Default, "Equity")) datedAccounts dates [])))}
 
 let rec printReportLine indent (line : Line) =
     for balance in line.Amounts.Balances do
@@ -89,7 +89,7 @@ let rec printReportLine indent (line : Line) =
     for i in 1 .. indent do
         printf " "
     match line.Account with
-        (InputName str) -> printf "%s\n" str
+        (InputName (entity,name)) -> printf "%s\n" name
     for subLine in line.SubAccounts do
         printReportLine (indent+2) subLine
 

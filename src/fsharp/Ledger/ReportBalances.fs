@@ -29,7 +29,7 @@ let rec accountBalanceReport (name:InputNameAccount)  (a: Account) =
         -> (accountBalanceReport (joinInputNames name onlyChild.LastName.Input) onlyChild)
     | _ -> { Account = name;
              Balance = a.Balance;
-             SubAccounts = [for account in subAccounts -> (accountBalanceReport account.LastName.Input.AsInputName account)]}
+             SubAccounts = [for account in subAccounts -> (accountBalanceReport account.LastName.Input account)]}
 
 let generateReport (input: InputFile) =
     let accounts = Accounts(transactions input)
@@ -37,11 +37,11 @@ let generateReport (input: InputFile) =
         match (accounts.find account) with
         | None -> lines
         | Some a -> (accountBalanceReport a.FullInputName a)::lines
-    {lines = (addLine (InputName "Assets")
-             (addLine (InputName "Liabilities")
-             (addLine (InputName "Income")
-             (addLine (InputName "Expenses")
-             (addLine (InputName "Equity") [])))))}
+    {lines = (addLine (InputName (Default, "Assets"))
+             (addLine (InputName (Default, "Liabilities"))
+             (addLine (InputName (Default, "Income"))
+             (addLine (InputName (Default, "Expenses"))
+             (addLine (InputName (Default, "Equity")) [])))))}
 
 let rec printBalanceReportLine indent (line : Line) =
     printf "%s\t" (Text.fmt line.Balance)

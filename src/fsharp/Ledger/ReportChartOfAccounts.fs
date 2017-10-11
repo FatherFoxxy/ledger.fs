@@ -28,17 +28,17 @@ let addLine (name: InputNameAccount) (accounts: Accounts) linesSoFar =
 
 let generateReport (input: InputFile) =
     let accounts = (Accounts (transactions input))
-    {Lines = (addLine (InputName "Assets") accounts
-             (addLine (InputName "Liabilities") accounts
-             (addLine (InputName "Income") accounts
-             (addLine (InputName "Expenses") accounts
-             (addLine (InputName "Equity") accounts [])))))}
+    {Lines = (addLine (InputName(Default, "Assets")) accounts
+             (addLine (InputName(Default, "Liabilities")) accounts
+             (addLine (InputName(Default, "Income")) accounts
+             (addLine (InputName(Default, "Expenses")) accounts
+             (addLine (InputName(Default, "Equity")) accounts [])))))}
 
 let rec printLine indent (line : Line) =
     for i in 1 .. indent do
         printf " "
     match line.Account with
-        (InputName str) -> printf "%s\n" str
+        (InputName (entity,name)) -> printf "%s\n" name
     for subLine in line.SubAccounts do
         printLine (indent+2) subLine
 
