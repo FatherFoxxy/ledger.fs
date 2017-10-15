@@ -67,7 +67,7 @@ let rec constructReportBalancesByDateLine (accounts : Account option List) (acco
                 (constructReportBalancesByDateLine childAccounts child) ]
       Postings = accountTree.Postings }
 
-let addLine (name: InputNameAccount) (accounts: DatedAccounts) (dates: Date list) linesSoFar =
+let addLine (accounts: DatedAccounts) (dates: Date list) (name: InputNameAccount) linesSoFar =
     let lastDate = (List.max dates)
     let finalAccounts = accounts.[lastDate] in
     match finalAccounts.find(name)  with
@@ -80,12 +80,16 @@ let addLine (name: InputNameAccount) (accounts: DatedAccounts) (dates: Date list
 
 let generateReport (input: InputFile) (dates: Date list)  =
     let datedAccounts = (accountsByDate input dates)
+    let addLine = addLine datedAccounts dates
+    let lines = [for a in datedAccounts -> 
+                        [for b in a.Value.Accounts -> 
+                            b.Value.FullInputName]]
+                     |> List.collect id
+                     |> List.fold (fun (acc:Line list) (elem:InputNameAccount) -> 
+                         addLine(elem) acc) []
+
     {Dates = dates;
-     Lines = (addLine (InputName(Default, "Assets")) datedAccounts dates
-             (addLine (InputName(Default, "Liabilities")) datedAccounts dates
-             (addLine (InputName(Default, "Income")) datedAccounts dates
-             (addLine (InputName(Default, "Expenses")) datedAccounts dates
-             (addLine (InputName(Default, "Equity")) datedAccounts dates [])))))}
+     Lines = lines}
 
 let rec printReportLine indent (line : Line) =
     for balance in line.Amounts.Balances do

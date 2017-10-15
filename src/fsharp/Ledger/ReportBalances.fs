@@ -17,7 +17,7 @@ type Line =
       Balance : Amount
       SubAccounts : Line list }
 
-type Report = {lines: Line list}
+type Report = {Lines: Line list}
 
 let rec accountBalanceReport (name:InputNameAccount)  (a: Account) =
     let subAccounts = [for KeyValue(name, account) in (a.SubAccounts|>Seq.sortBy (fun (KeyValue(k,_)) -> k) ) -> account]
@@ -37,11 +37,10 @@ let generateReport (input: InputFile) =
         match (accounts.find account) with
         | None -> lines
         | Some a -> (accountBalanceReport a.FullInputName a)::lines
-    {lines = (addLine (InputName (Default, "Assets"))
-             (addLine (InputName (Default, "Liabilities"))
-             (addLine (InputName (Default, "Income"))
-             (addLine (InputName (Default, "Expenses"))
-             (addLine (InputName (Default, "Equity")) [])))))}
+    {Lines=([for account in accounts.Accounts -> 
+                 account.Key.AsInputName] 
+                 |> List.fold (fun (acc:Line list) (elem:InputNameAccount) -> 
+                    addLine(elem) acc) [])}
 
 let rec printBalanceReportLine indent (line : Line) =
     printf "%s\t" (Text.fmt line.Balance)
@@ -53,5 +52,5 @@ let rec printBalanceReportLine indent (line : Line) =
 
 let printBalanceReport report =
     printf "Balance\tAccount\n-------\t-------\n"
-    for line in report.lines do
+    for line in report.Lines do
         printBalanceReportLine 0 line

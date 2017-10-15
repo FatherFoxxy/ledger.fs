@@ -21,18 +21,18 @@ let rec constructLine (account: Account) =
       SubAccounts = [for child in subAccounts ->
                         (constructLine child)]}
                                                                                                                                         
-let addLine (name: InputNameAccount) (accounts: Accounts) linesSoFar =
+let addLine (accounts: Accounts) (name: InputNameAccount)  linesSoFar =
     match accounts.find(name)  with
         | Some account -> ((constructLine account) :: linesSoFar)
         | None -> linesSoFar
 
 let generateReport (input: InputFile) =
     let accounts = (Accounts (transactions input))
-    {Lines = (addLine (InputName(Default, "Assets")) accounts
-             (addLine (InputName(Default, "Liabilities")) accounts
-             (addLine (InputName(Default, "Income")) accounts
-             (addLine (InputName(Default, "Expenses")) accounts
-             (addLine (InputName(Default, "Equity")) accounts [])))))}
+    let addLine = addLine accounts //partial application, one of the greatest features in F#, allows for cleaner code when we're simply passing a single, static variable
+    {Lines=([for account in accounts.Accounts -> 
+                 account.Key.AsInputName] 
+                 |> List.fold (fun (acc:Line list) (elem:InputNameAccount) -> 
+                    addLine elem acc) [])}
 
 let rec printLine indent (line : Line) =
     for i in 1 .. indent do
@@ -45,6 +45,15 @@ let rec printLine indent (line : Line) =
 let printReport report =
     (* Balance/Change headings line *)
     printf "Account\n"
-    printf "-------\n"         
-    for line in report.Lines do
-        printLine 0 line
+    printf "-------\n"
+
+    let collapsed = 
+        report.Lines 
+        |> List.map (fun l -> (l.Account.Entity, l)) 
+        |> List.collapse
+
+    for (key,lines) in collapsed do
+        printfn "%s/" key.AsString
+        for line in lines do
+            printLine 1 line
+        printfn ""
