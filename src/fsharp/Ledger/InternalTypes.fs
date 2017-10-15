@@ -47,7 +47,18 @@ let validAccountName (a:InputNameAccount) =
         match (accountType a) with _ -> true
     with BadAccountNameException(name, problem) -> false
  
-type CanonicalNameComponent = Canonical of string
+type CanonicalNameComponent = 
+    | Canonical of (AccountEntity * string)
+    with
+        member this.Entity =
+            match this with
+            | Canonical (entity,canonical) -> entity
+        member this.CanonicalName =
+            match this with
+            | Canonical (entity, canonical) -> canonical
+        member this.AsInputName =
+            match this with
+            | Canonical (entity, canonical) -> InputName(entity, canonical)
 
 type AccountNameComponent = {
     Canonical: CanonicalNameComponent;
@@ -70,11 +81,11 @@ let toInputName (name: InternalNameAccount) : InputNameAccount =
 let canonicalRootName name =
     let accountType = accountType name
     (Canonical (match accountType with
-                | Asset -> "ASSETS"
-                | Liability -> "LIABILITY"
-                | Income -> "INCOME"
-                | Expense -> "EXPENSE"
-                | Equity -> "EQUITY"))
+                | Asset ->      (name.Entity, "ASSETS")
+                | Liability ->  (name.Entity, "LIABILITY")
+                | Income ->     (name.Entity, "INCOME")
+                | Expense ->    (name.Entity, "EXPENSE")
+                | Equity ->     (name.Entity, "EQUITY")))
 
 /// Break AccountName into ordered list of components.
 /// For each level of the account, we produce canonical & input components.
@@ -84,7 +95,7 @@ let splitAccountName (InputName (entity,name)) : InternalNameAccount =
         let rec helper (components: string list) =
             match components with
             | [] -> []
-            | first::rest -> {Canonical = (Canonical (first.ToUpper())); Input = (InputName (entity,first))} :: (helper rest)
+            | first::rest -> {Canonical = (Canonical (entity, first.ToUpper())); Input = (InputName (entity,first))} :: (helper rest)
         match components with
             | root::rest -> {Canonical = (canonicalRootName (InputName (entity,name))); Input = (InputName (entity,root))} :: (helper rest)
             | [] -> raise (BadAccountNameException((InputName (entity,name), "Empty name")))
