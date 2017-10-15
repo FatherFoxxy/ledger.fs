@@ -37,7 +37,8 @@ exception EntityMismatch of acc1:InputNameAccount * acc2:InputNameAccount
     with
         member this.ToString =
             "Entity Mismatch: " + this.acc1.Entity.AsString + " <> " + this.acc2.Entity.AsString + "\r\n" +
-            "Additional Information: " + this.acc1.AsString + " <> " + this.acc2.AsString
+            "Additional Information: " + this.acc1.AsString + " <> " + this.acc2.AsString + "\r\n" +
+            "Stacktrace: " + this.StackTrace
 
 exception BadEntityNameException of name:InputNameAccount * problem: string
 
