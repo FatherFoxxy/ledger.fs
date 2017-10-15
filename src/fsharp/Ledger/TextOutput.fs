@@ -11,14 +11,16 @@ open InternalTypes
 type Text =
     static member fmt (x:InternalNameAccount) =
         let entity = x.[0].Input.Entity.AsString //XXX: There has to be a better way, perhaps InternalNameAccount will have Entity as a top level field?
-        (sprintf "%s/" entity) + (match x with
-                                  | last::[] ->
-                                      match last.Input with
-                                          (InputName (entity, name)) -> (sprintf "%s" name)
-                                  | first::rest ->
-                                      match first.Input with
-                                          (InputName (entity, name)) -> (sprintf "%s:%s" name (Text.fmt rest))
-                                  | [] -> raise EmptyAccountNameComponentsException)
+        let rec helper (y:InternalNameAccount) = 
+            match y with
+            | last::[] ->
+                match last.Input with
+                    (InputName (entity, name)) -> (sprintf "%s" name)
+            | first::rest ->
+                match first.Input with
+                    (InputName (entity, name)) -> (sprintf "%s:%s" name (helper rest))
+            | [] -> raise EmptyAccountNameComponentsException
+        (sprintf "%s/" entity) + (helper x)
 
     static member fmt (x: Amount) =
         match x with

@@ -57,7 +57,7 @@ let rec constructReportBalancesByDateLine (accounts : Account option List) (acco
                         | Some account -> account.Balance
                         | None -> zeroAmount)
                   accounts)
-    { Account = accountTree.Name.[0].Input //XXX: Ugh, I can't believe I keep doing this. There has to be a better way.......
+    { Account = InputName (accountTree.Name.[0].Input.Entity, Text.fmt accountTree.Name) //XXX: Ugh, I can't believe I keep doing this. There has to be a better way.......
       Amounts =
           { Balances = balances
             Differences = (differences balances) }
@@ -98,7 +98,7 @@ let rec printReportLine indent (line : Line) =
         printf "%s\t" (Text.fmt difference)
     for i in 1 .. indent do
         printf " "
-    printf "%s\n" line.Account.AsString
+    printf "%s\n" line.Account.Name
     for subLine in line.SubAccounts do
         printReportLine (indent+2) subLine
 
