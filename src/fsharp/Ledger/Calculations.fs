@@ -88,8 +88,12 @@ let verifyEntitiesInTransactions (transactions:Transaction list) =
     transactions
     |> List.map (fun transaction -> 
                       (transaction, match verifyEntitiesInPostings transaction.postings with 
-                                    | EntityVerificationPassed -> [] 
+                                    | EntityVerificationPassed -> []
                                     | UnbalancedEntities entities -> entities))
+    |> List.filter (snd >> (<>) [])
+    // F# never ceases to amaze. This bit basically says "filter all items where the second item in a tuple is not an empty list". 
+    // the equivalent is (fun x -> snd x <> []) would achieve the same result 
+
 /// Is transaction unbalanced?
 let balance (t:Transaction) =
     let signedAmount (p: Posting) =
