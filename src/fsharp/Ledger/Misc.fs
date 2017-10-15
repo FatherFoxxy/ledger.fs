@@ -20,3 +20,24 @@ let rec startsWith<'X when 'X: equality> (a :'X list) (b :'X list) =
 type NonEmptyList<'t> =
     | One of 't
     | More of first:'t * rest:NonEmptyList<'t>
+
+// Collapse functions. Basically collapses a list of tuples to a dictionary. I have chosen to return a list of tuples in the format (key*values[]) instead.
+module List =
+    let collapse (kv:('a*'b) List) =
+        let data1, data2 = kv |> List.unzip
+        let keys = data1 |> Seq.distinct |> List.ofSeq
+
+        keys
+        |> List.map (fun x -> (x, kv 
+                                  |> List.filter (fun (k,v) -> k=x) 
+                                  |> List.map snd))
+
+module Array =
+    let collapse(kv:('a*'b)[]) =
+        let data1, data2 = kv |> Array.unzip
+        let keys = data1 |> Seq.distinct |> Array.ofSeq //there's a natice Array.distinct in newer versions of F#, but this project is targeting an older version
+
+        keys
+        |> Array.map (fun x -> (x, kv 
+                                  |> Array.filter (fun (k,v) -> k=x) 
+                                  |> Array.map snd))
