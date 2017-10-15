@@ -115,7 +115,7 @@ let filter (transactions : Transaction list) (first : Date option) (last : Date 
 
 // Is a a sub-account of b?
 let isSubAccountOf (a: InputNameAccount) (b: InputNameAccount) =
-    startsWith (canonicalAccountName a) (canonicalAccountName b)
+    startsWith (canonicalAccountName a) (canonicalAccountName b) && a.Entity=b.Entity
 
 /// XXX: affectedBy(Posting/Transaction) should be a method on AccountName, which should be a class. Do we even need these at all?
 let postingAffects (p:Posting) (a: InputNameAccount) =
