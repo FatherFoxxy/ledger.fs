@@ -119,15 +119,16 @@ let validate (input: InputFile) =
                 (nonFatal (sprintf "Imbalance of %s in transaction dated %s (%s)."
                                 (Text.fmt (absAmount (balance t))) t.date t.description))
             (fatal "Error in input file - unbalanced transactions.")
+    
     (validateBalanceAssertions input)
 
 let demo () =
     try
         let timer = new System.Diagnostics.Stopwatch()
-        let input = parseInputFile "..\..\..\..\..\Examples\sample.transactions" in do
+        let input = parseInputFile "..\..\..\..\..\Examples\entity_sample.transactions" in do
             (validate input)
             printfn "Elapsed Time: %i ms.\n" timer.ElapsedMilliseconds
-            let report = (ReportRegister.generateReport input (InputName "Expenses")) in do
+            let report = (ReportRegister.generateReport input (InputName (Entity "TEST_ENTITY","Expenses"))) in do
                 printf "Elapsed Time: %i ms.\n" timer.ElapsedMilliseconds
                 (printf "\nDEMO: EXPENSES REGISTER\n")
                 (ReportRegister.printRegisterReport report)
@@ -174,6 +175,8 @@ let usage = """Ledger.fs: simple command-line double-entry accounting.
 let main argv =
   try
     let arguments = DocoptNet.Docopt().Apply(usage, argv, exit=true)
+    //let testargv = [|"..\..\..\..\..\Examples\entity_sample.transactions"; "transactions"; "2013-01-05"; "2013-01-10"|]
+    //let arguments = DocoptNet.Docopt().Apply(usage, testargv)
     let inputFileName = (string arguments.["<input-filename>"])
     let dates = ([for d in arguments.["<date>"].AsList -> (string d)] |> List.sort)
     let firstDate = match (string arguments.["<first-date>"]) with | "" -> None | date -> Some date
