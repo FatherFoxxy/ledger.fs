@@ -13,9 +13,9 @@ type ``Test Internal Types`` () =
     [<Test>]
     member test.``splitAccountName.`` () =
         splitAccountName (InputName(Entity "TEST_ENTITY", "Expenses:BankFees:AccountServiceFee"))
-        |> should equal [{Canonical = (Canonical "EXPENSE"); Input = (InputName(Entity "TEST_ENTITY", "Expenses"));};
-                         {Canonical = (Canonical "BANKFEES"); Input = (InputName(Entity "TEST_ENTITY", "BankFees"));};
-                         {Canonical = (Canonical "ACCOUNTSERVICEFEE"); Input = (InputName(Entity "TEST_ENTITY", "AccountServiceFee"));}]
+        |> should equal [{Canonical = (Canonical (Entity "TEST_ENTITY", "EXPENSE")); Input = (InputName(Entity "TEST_ENTITY", "Expenses"));};
+                         {Canonical = (Canonical (Entity "TEST_ENTITY", "BANKFEES")); Input = (InputName(Entity "TEST_ENTITY", "BankFees"));};
+                         {Canonical = (Canonical (Entity "TEST_ENTITY", "ACCOUNTSERVICEFEE")); Input = (InputName(Entity "TEST_ENTITY", "AccountServiceFee"));}]
     [<Test>]
     member test.``Book posting to Account.``() =
         /// I think this might even work ... It did - on the first attempt.
@@ -29,14 +29,14 @@ type ``Test Internal Types`` () =
                  Transaction.description = "dummy"}
         let detail = {posting=p;transaction=t}
         let a2 = a.Book(p, t, (List.tail (splitAccountName p.account)))
-        a2.SubAccounts.ContainsKey(Canonical "BANKWEST") |> should be True
-        a2.SubAccounts.[Canonical "BANKWEST"].SubAccounts.ContainsKey(Canonical "CHEQUE") |> should be True
+        a2.SubAccounts.ContainsKey(Canonical (Entity "TEST_ENTITY", "BANKWEST")) |> should be True
+        a2.SubAccounts.[Canonical (Entity "TEST_ENTITY", "BANKWEST")].SubAccounts.ContainsKey(Canonical (Entity "TEST_ENTITY", "CHEQUE")) |> should be True
         a2.Balance |> should equal (AUD 100000)
-        a2.SubAccounts.[Canonical "BANKWEST"].Balance |> should equal (AUD 100000)
-        a2.SubAccounts.[Canonical "BANKWEST"].SubAccounts.[Canonical "CHEQUE"].Balance |> should equal (AUD 100000)
+        a2.SubAccounts.[Canonical (Entity "TEST_ENTITY", "BANKWEST")].Balance |> should equal (AUD 100000)
+        a2.SubAccounts.[Canonical (Entity "TEST_ENTITY", "BANKWEST")].SubAccounts.[Canonical(Entity "TEST_ENTITY",  "CHEQUE")].Balance |> should equal (AUD 100000)
         a2.Postings |> should equal PersistentQueue.Empty
-        a2.SubAccounts.[Canonical "BANKWEST"].Postings |> should equal PersistentQueue.Empty
-        a2.SubAccounts.[Canonical "BANKWEST"].SubAccounts.[Canonical "CHEQUE"].Postings |> should equal (PersistentQueue.Empty.Enqueue detail)
+        a2.SubAccounts.[Canonical (Entity "TEST_ENTITY", "BANKWEST")].Postings |> should equal PersistentQueue.Empty
+        a2.SubAccounts.[Canonical (Entity "TEST_ENTITY", "BANKWEST")].SubAccounts.[Canonical (Entity "TEST_ENTITY", "CHEQUE")].Postings |> should equal (PersistentQueue.Empty.Enqueue detail)
     [<Test>]
     member test.``Book posting to Accounts.``() =
         /// And this also seems to work on first attempt.
@@ -49,15 +49,15 @@ type ``Test Internal Types`` () =
                  Transaction.description = "dummy"}
         let detail = {posting=p;transaction=t}
         let a2 = a.Book(p, t)
-        a2.Accounts.ContainsKey(Canonical "ASSETS") |> should be True
-        a2.Accounts.[Canonical "ASSETS"].SubAccounts.ContainsKey(Canonical "BANKWEST") |> should be True
-        a2.Accounts.[Canonical "ASSETS"].SubAccounts.[Canonical "BANKWEST"].SubAccounts.ContainsKey(Canonical "CHEQUE") |> should be True
-        a2.Accounts.[Canonical "ASSETS"].Balance |> should equal (AUD 100000)
-        a2.Accounts.[Canonical "ASSETS"].SubAccounts.[Canonical "BANKWEST"].Balance |> should equal (AUD 100000)
-        a2.Accounts.[Canonical "ASSETS"].SubAccounts.[Canonical "BANKWEST"].SubAccounts.[Canonical "CHEQUE"].Balance |> should equal (AUD 100000)
-        a2.Accounts.[Canonical "ASSETS"].Postings |> should equal PersistentQueue.Empty
-        a2.Accounts.[Canonical"ASSETS"].SubAccounts.[Canonical "BANKWEST"].Postings |> should equal PersistentQueue.Empty
-        a2.Accounts.[Canonical"ASSETS"].SubAccounts.[Canonical "BANKWEST"].SubAccounts.[Canonical "CHEQUE"].Postings |> should equal (PersistentQueue.Empty.Enqueue detail)
+        a2.Accounts.ContainsKey(Canonical (Entity "TEST_ENTITY", "ASSETS")) |> should be True
+        a2.Accounts.[Canonical (Entity "TEST_ENTITY", "ASSETS")].SubAccounts.ContainsKey(Canonical (Entity "TEST_ENTITY", "BANKWEST")) |> should be True
+        a2.Accounts.[Canonical (Entity "TEST_ENTITY", "ASSETS")].SubAccounts.[Canonical (Entity "TEST_ENTITY", "BANKWEST")].SubAccounts.ContainsKey(Canonical(Entity "TEST_ENTITY", "CHEQUE")) |> should be True
+        a2.Accounts.[Canonical (Entity "TEST_ENTITY", "ASSETS")].Balance |> should equal (AUD 100000)
+        a2.Accounts.[Canonical (Entity "TEST_ENTITY", "ASSETS")].SubAccounts.[Canonical (Entity "TEST_ENTITY", "BANKWEST")].Balance |> should equal (AUD 100000)
+        a2.Accounts.[Canonical (Entity "TEST_ENTITY", "ASSETS")].SubAccounts.[Canonical (Entity "TEST_ENTITY", "BANKWEST")].SubAccounts.[Canonical (Entity "TEST_ENTITY",  "CHEQUE")].Balance |> should equal (AUD 100000)
+        a2.Accounts.[Canonical (Entity "TEST_ENTITY", "ASSETS")].Postings |> should equal PersistentQueue.Empty
+        a2.Accounts.[Canonical (Entity "TEST_ENTITY", "ASSETS")].SubAccounts.[Canonical (Entity "TEST_ENTITY", "BANKWEST")].Postings |> should equal PersistentQueue.Empty
+        a2.Accounts.[Canonical (Entity "TEST_ENTITY", "ASSETS")].SubAccounts.[Canonical (Entity "TEST_ENTITY", "BANKWEST")].SubAccounts.[Canonical (Entity "TEST_ENTITY", "CHEQUE")].Postings |> should equal (PersistentQueue.Empty.Enqueue detail)
     [<Test>]
     member test.``Book transaction to Accounts.``() =
         // Maybe this is also right first time.
@@ -73,11 +73,11 @@ type ``Test Internal Types`` () =
         let detail1 = {posting=t.postings.[1];transaction=t}
         let a = Accounts()
         let a2 = a.Book(t)
-        a2.Accounts.ContainsKey(Canonical "ASSETS") |> should be True
-        a2.Accounts.ContainsKey(Canonical "EQUITY") |> should be True
-        a2.Accounts.[Canonical "ASSETS"].Balance |> should equal (AUD 100000)
-        a2.Accounts.[Canonical "EQUITY"].Balance |> should equal (AUD 100000)
-        a2.Accounts.[Canonical "ASSETS"].Postings |> should equal (PersistentQueue.Empty)
-        a2.Accounts.[Canonical "EQUITY"].Postings |> should equal (PersistentQueue.Empty)
-        a2.Accounts.[Canonical "ASSETS"].SubAccounts.[Canonical "BANKWEST"].SubAccounts.[Canonical "CHEQUE"].Postings |> should equal (PersistentQueue.Empty.Enqueue detail0)
-        a2.Accounts.[Canonical "EQUITY"].SubAccounts.[Canonical "OPENINGBALANCES"].Postings |> should equal (PersistentQueue.Empty.Enqueue detail1)
+        a2.Accounts.ContainsKey(Canonical (Entity "TEST_ENTITY", "ASSETS")) |> should be True
+        a2.Accounts.ContainsKey(Canonical (Entity "TEST_ENTITY", "EQUITY")) |> should be True
+        a2.Accounts.[Canonical (Entity "TEST_ENTITY", "ASSETS")].Balance |> should equal (AUD 100000)
+        a2.Accounts.[Canonical (Entity "TEST_ENTITY", "EQUITY")].Balance |> should equal (AUD 100000)
+        a2.Accounts.[Canonical (Entity "TEST_ENTITY", "ASSETS")].Postings |> should equal (PersistentQueue.Empty)
+        a2.Accounts.[Canonical (Entity "TEST_ENTITY", "EQUITY")].Postings |> should equal (PersistentQueue.Empty)
+        a2.Accounts.[Canonical (Entity "TEST_ENTITY", "ASSETS")].SubAccounts.[Canonical (Entity "TEST_ENTITY", "BANKWEST")].SubAccounts.[Canonical (Entity "TEST_ENTITY", "CHEQUE")].Postings |> should equal (PersistentQueue.Empty.Enqueue detail0)
+        a2.Accounts.[Canonical (Entity "TEST_ENTITY", "EQUITY")].SubAccounts.[Canonical (Entity "TEST_ENTITY", "OPENINGBALANCES")].Postings |> should equal (PersistentQueue.Empty.Enqueue detail1)
