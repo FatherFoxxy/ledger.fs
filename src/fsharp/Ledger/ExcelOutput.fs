@@ -431,7 +431,7 @@ type Excel =
             let worksheet = package.Workbook.Worksheets.Add("Balances")
             (setHeader worksheet.Cells.[1, 1] "Balance")
             (setHeader worksheet.Cells.[1, 2] "Account")
-            Excel.writeLines(report.lines, worksheet, 0, 2) |> ignore
+            Excel.writeLines(report.Lines, worksheet, 0, 2) |> ignore
             worksheet.View.FreezePanes(2, 1)
             worksheet.OutLineSummaryBelow <- false
 
