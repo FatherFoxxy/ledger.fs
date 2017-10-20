@@ -66,11 +66,11 @@ let pAmount =
     pAudAmount
 
 let pYear =
-    (pipe4 digit digit digit digit (fun a b c d -> System.String.Concat(Array.ofList([a;b;c;d])))) <?> "year"
+    (pipe4 digit digit digit digit (fun a b c d -> System.String.Concat([|a;b;c;d|]))) <?> "year"
 let pMonth =
-    (pipe2 digit digit (fun a b -> System.String.Concat(Array.ofList([a;b])))) <?> "month"
+    (pipe2 digit digit (fun a b -> System.String.Concat([|a;b|]))) <?> "month"
 let pDay =
-    (pipe2 digit digit (fun a b -> System.String.Concat(Array.ofList([a;b])))) <?> "day"
+    (pipe2 digit digit (fun a b -> System.String.Concat([|a;b|]))) <?> "day"
 let pDate =
     (pipe3 (pYear .>> (pchar '-'))
           (pMonth .>> (pchar '-'))
