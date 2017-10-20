@@ -6,18 +6,27 @@ open Misc
 
 open FParsec
 
-// XXX: Yuck! Can I do this without global state!
-// Yes: http://www.quanttec.com/fparsec/users-guide/parsing-with-user-state.html
-let mutable transactionId = 0
-let nextTransactionId () =
-    transactionId <- transactionId + 1
-    transactionId
-let resetTransactionId () =
-    transactionId <- 0
+type UserState = {TransactionId:int}
+    with
+        static member Default = 
+            {TransactionId=0}
+
+        member this.NextId (stream:CharStream<UserState>) =
+            let next = {TransactionId=this.TransactionId+1}
+            stream.UserState <- next //there is no escaping mutables for UserState, unfortunately
+            next.TransactionId
+
+        member this.ResetId (stream:CharStream<UserState>) =
+            let next = {TransactionId=0}
+            stream.UserState <- next
+            next.TransactionId
 
 type ParseResult =
     | ParseError of string
     | ParseSuccess of InputFile
+
+let run parser str =
+    runParserOnString parser UserState.Default "" str
 
 let nonEolWhiteSpace = " \t"
 // At least one space
@@ -93,14 +102,17 @@ let pPostings =
     (many1 (attempt pPosting))
 
 let pTransaction =
-    pipe3 pDate
-          (pMandatorySpace >>. (restOfLine false) .>> newline)
-          pPostings
-        (fun date description postings ->
-           Transaction { Transaction.date = date;
-                         Transaction.description = description;
-                         Transaction.postings = postings
-                         Transaction.id = nextTransactionId()})
+    fun (stream:CharStream<UserState>) ->
+        let p = pipe3 
+                  pDate
+                  (pMandatorySpace >>. (restOfLine false) .>> newline)
+                  pPostings
+                  (fun date description postings ->
+                     Transaction { Transaction.date = date;
+                                   Transaction.description = description;
+                                   Transaction.postings = postings
+                                   Transaction.id = stream.UserState.NextId stream})
+        p stream
 
 let pInput =
     pOptionalSpace >>. (pCommentLine <|> pBlankLine <|> pVerifyBalance <|> pTransaction)
@@ -114,8 +126,6 @@ let pInputFile =
 
 // Top-level parsing routine(s).
 let parseInputString str =
-    resetTransactionId() // XXX: Yuck! Can I do this without global state!
-    // Yes: http://www.quanttec.com/fparsec/users-guide/parsing-with-user-state.html
     match run pInputFile str with
         | Success(result, _, _) -> ParseSuccess(result)
         | Failure(errorMessage, _, _) -> ParseError(errorMessage)
