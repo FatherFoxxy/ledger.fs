@@ -81,12 +81,10 @@ let addLine (accounts: DatedAccounts) (dates: Date list) (name: InputNameAccount
 let generateReport (input: InputFile) (dates: Date list)  =
     let datedAccounts = (accountsByDate input dates)
     let addLine = addLine datedAccounts dates
-    let lines = [for a in datedAccounts -> 
-                        [for b in a.Value.Accounts -> 
-                            b.Value.FullInputName]]
-                     |> List.collect id
-                     |> List.fold (fun (acc:Line list) (elem:InputNameAccount) -> 
-                         addLine(elem) acc) []
+    let lines = [for account in datedAccounts.[dates|>List.max].Accounts -> account.Value.FullInputName]
+                |> List.sortBy (fun x -> x.Entity)
+                |> List.fold (fun (acc:Line list) (elem:InputNameAccount) -> 
+                    addLine(elem) acc) []
 
     {Dates = dates;
      Lines = lines}
@@ -98,7 +96,7 @@ let rec printReportLine indent (line : Line) =
         printf "%s\t" (Text.fmt difference)
     for i in 1 .. indent do
         printf " "
-    printf "%s\n" line.Account.Name
+    printf "%s/%s\n" line.Account.Entity.AsString line.Account.Name
     for subLine in line.SubAccounts do
         printReportLine (indent+2) subLine
 
