@@ -4,6 +4,7 @@ open InputTypes
 open TextOutput
 open InternalTypes
 open OfficeOpenXml
+open Misc
 
 type Destination = ExcelPackage option
 
@@ -403,10 +404,7 @@ type Excel =
                 for c in (txnNumCol-1)..(txnNumCol+2) do
                     worksheet.Column(c).AutoFit(0.0)
 
-    static member writeLine((line: ReportBalances.Line),
-                            (ws : ExcelWorksheet),
-                            (indent: int),
-                            (nextRow: int)) =
+    static member writeLine((line: ReportBalances.Line),  (ws : ExcelWorksheet), (indent: int), (nextRow: int)) =
       (Excel.setValue (ws.Cells.[nextRow, 1], line.Balance))
       Excel.setValue (ws.Cells.[nextRow, 2+indent], line.Account.AsString)
       if indent <> 0 then
@@ -416,10 +414,7 @@ type Excel =
         ws.Row(nextRow).Collapsed <- true
       rowAfterChildren
 
-    static member writeLines((lines : ReportBalances.Line list),
-                             (ws : ExcelWorksheet),
-                             (indent: int),
-                             (nextRow: int)) =
+    static member writeLines((lines : ReportBalances.Line list), (ws : ExcelWorksheet),  (indent: int), (nextRow: int)) =
         match lines with
             | [] -> nextRow
             | first::rest -> Excel.writeLines(rest, ws, indent, Excel.writeLine(first, ws, indent, nextRow))
@@ -435,55 +430,52 @@ type Excel =
             worksheet.View.FreezePanes(2, 1)
             worksheet.OutLineSummaryBelow <- false
 
-    static member writeLine((line: ReportChartOfAccounts.Line),
-                            (ws : ExcelWorksheet),
-                            (indent: int),
-                            (nextRow: int)) =
-      Excel.setValue (ws.Cells.[nextRow, 1+indent], line.Account.AsString)
-      if indent <> 0 then
+    static member writeLine((line: ReportChartOfAccounts.Line), (ws : ExcelWorksheet), (indent: int), (nextRow: int)) =
+      Excel.setValue (ws.Cells.[nextRow, 1+indent], line.Account.Name)
+      if indent <> 1 then
         ws.Row(nextRow).OutlineLevel <- (indent)
       // Deliberately avoid collapsing hierarchy. If we're looking, we probably want to
       // emphasise details, and it's easy to manually hide them if that's what is wanted.
       Excel.writeLines (line.SubAccounts, ws, indent+1, nextRow+1)
 
-    static member writeLines((lines : ReportChartOfAccounts.Line list),
-                             (ws : ExcelWorksheet),
-                             (indent: int),
-                             (nextRow: int)) =
-        match lines with
-            | [] -> nextRow
-            | first::rest -> Excel.writeLines(rest, ws, indent, Excel.writeLine(first, ws, indent, nextRow))
+    static member writeLines((lines : ReportChartOfAccounts.Line list), (ws : ExcelWorksheet), (indent: int), (nextRow: int)) =
+      match lines with
+      | [] -> nextRow
+      | first::rest -> Excel.writeLines(rest, ws, indent, Excel.writeLine(first, ws, indent, nextRow))
 
     static member write((report : ReportChartOfAccounts.Report), (destination : Destination)) =
-        match destination with
-            | None -> ()
-            | Some package ->
-                let worksheet = package.Workbook.Worksheets.Add("Chart Of Accounts")
-                (setHeader worksheet.Cells.[1, 1] "Account")
-                Excel.writeLines(report.Lines, worksheet, 0, 2) |> ignore
-                worksheet.View.FreezePanes(2, 1)
-                worksheet.OutLineSummaryBelow <- false
+      match destination with
+      | None -> ()
+      | Some package ->
+          let worksheet = package.Workbook.Worksheets.Add("Chart Of Accounts")
+          (setHeader worksheet.Cells.[1, 1] "Account")
+          report.Lines 
+          |> List.map (fun line -> (line.Account.Entity, line)) 
+          |> List.collapse
+          |> List.fold (fun nextRow (entity,accounts) -> 
+                            Excel.setValue(worksheet.Cells.[nextRow,1], entity.AsString)
+                            Excel.writeLines(accounts, worksheet, 1, nextRow+1)) 2
+          |> ignore
+          worksheet.View.FreezePanes(2, 1)
+          worksheet.OutLineSummaryBelow <- false
 
-    static member writeLine((line: ReportTransactionList.Line),
-                            (ws : ExcelWorksheet),
-                            (nextRow: int)) =
-
+    static member writeLine((line: ReportTransactionList.Line), (ws : ExcelWorksheet), (nextRow: int)) =
       let txnCell = ws.Cells.[nextRow, 1]
       let dateCell = ws.Cells.[nextRow, 2]
       let descCell = ws.Cells.[nextRow, 3]
-
+      
       Excel.setValue (txnCell, (sprintf "txn:%d" line.transaction.id))
       txnCell.Style.Border.Top.Style <- OfficeOpenXml.Style.ExcelBorderStyle.Thin
-
+      
       Excel.setValue (dateCell, line.transaction.date)
       dateCell.Style.Font.Bold <- true
       dateCell.Style.Border.Top.Style <- OfficeOpenXml.Style.ExcelBorderStyle.Thin
-
+      
       Excel.setValue (descCell, line.transaction.description)
       descCell.Style.Font.Bold <- true
       descCell.Style.Font.Italic <- true
       descCell.Style.Border.Top.Style <- OfficeOpenXml.Style.ExcelBorderStyle.Thin
-
+      
       line.transaction.postings
       |> List.fold (fun row p ->
                         Excel.setValue (ws.Cells.[row, 2], p.amount)
@@ -491,31 +483,29 @@ type Excel =
                         row+1) (nextRow+1)
       
 
-    static member writeLines((lines : ReportTransactionList.Line list),
-                             (ws : ExcelWorksheet),
-                             (nextRow: int)) =
-        match lines with
-            | [] -> nextRow
-            | first::rest -> Excel.writeLines(rest, ws, Excel.writeLine(first, ws, nextRow))
+    static member writeLines((lines : ReportTransactionList.Line list), (ws : ExcelWorksheet), (nextRow: int)) =
+      match lines with
+      | [] -> nextRow
+      | first::rest -> Excel.writeLines(rest, ws, Excel.writeLine(first, ws, nextRow))
 
     static member write((report : ReportTransactionList.Report), (destination : Destination)) =
-        match destination with
-            | None -> ()
-            | Some package ->
-                let worksheet = package.Workbook.Worksheets.Add("Transactions")
+      match destination with
+      | None -> ()
+      | Some package ->
+          let worksheet = package.Workbook.Worksheets.Add("Transactions")
 
-                match report.first with
-                | Some date -> (setHeader worksheet.Cells.[1, 1] "From:")
-                               (setHeader worksheet.Cells.[1, 2] date)
-                | None -> ()
-                match report.last with
-                | Some date -> (setHeader worksheet.Cells.[2, 1] "To:")
-                               (setHeader worksheet.Cells.[2, 2] date)
-                | None -> ()
-                (setHeader worksheet.Cells.[3, 1] "Transaction#")
-                (setHeader worksheet.Cells.[3, 2] "Date/Amount")
-                (setHeader worksheet.Cells.[3, 3] "Description/Account")
-                worksheet.View.FreezePanes(4, 1)
-                Excel.writeLines(report.lines, worksheet, 4) |> ignore
-                for c in 1..3 do
-                    worksheet.Column(c).AutoFit(0.0)
+          match report.first with
+          | Some date -> (setHeader worksheet.Cells.[1, 1] "From:")
+                         (setHeader worksheet.Cells.[1, 2] date)
+          | None -> ()
+          match report.last with
+          | Some date -> (setHeader worksheet.Cells.[2, 1] "To:")
+                         (setHeader worksheet.Cells.[2, 2] date)
+          | None -> ()
+          (setHeader worksheet.Cells.[3, 1] "Transaction#")
+          (setHeader worksheet.Cells.[3, 2] "Date/Amount")
+          (setHeader worksheet.Cells.[3, 3] "Description/Account")
+          worksheet.View.FreezePanes(4, 1)
+          Excel.writeLines(report.lines, worksheet, 4) |> ignore
+          for c in 1..3 do
+              worksheet.Column(c).AutoFit(0.0)
