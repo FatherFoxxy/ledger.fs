@@ -224,7 +224,7 @@ type Account = struct
                 else
                     None
       member this.SubAccountsOrderedByInputName =
-        let namesAndAccounts = (this.SubAccounts |> Seq.sortBy (fun (KeyValue(_,account)) -> account.LastName.Input))
+        let namesAndAccounts = (this.SubAccounts |> Seq.sortBy (fun (KeyValue(_,account)) -> account.LastName.Input.Name))
         [for KeyValue(_, account) in namesAndAccounts -> account]        
     end
 
