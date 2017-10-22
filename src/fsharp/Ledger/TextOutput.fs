@@ -10,7 +10,6 @@ open InternalTypes
 
 type Text =
     static member fmt (x:InternalNameAccount) =
-        let entity = x.[0].Input.Entity.AsString //XXX: There has to be a better way, perhaps InternalNameAccount will have Entity as a top level field?
         let rec helper (y:InternalNameAccount) = 
             match y with
             | last::[] ->
@@ -20,7 +19,7 @@ type Text =
                 match first.Input with
                     (InputName (entity, name)) -> (sprintf "%s:%s" name (helper rest))
             | [] -> raise EmptyAccountNameComponentsException
-        (sprintf "%s/" entity) + (helper x)
+        (helper x)
 
     static member fmt (x: Amount) =
         match x with
