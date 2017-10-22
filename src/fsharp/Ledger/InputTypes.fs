@@ -13,13 +13,11 @@ type AccountName = string
 
 type AccountEntity = 
     | Default 
-    | TEMPENTITY
     | Entity of string
     with
     member this.AsString =
         match this with
         | Default -> "Default"
-        | TEMPENTITY -> "TEMPENTITY"
         | Entity e -> e
 
 type InputNameAccount = InputName of (AccountEntity * AccountName)
