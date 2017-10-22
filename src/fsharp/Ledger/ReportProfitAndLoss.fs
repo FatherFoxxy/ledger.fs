@@ -61,7 +61,7 @@ let rec constructReportProfitAndLossLine (accounts : Account option List) (accou
                         | Some account -> account.Balance
                         | None -> zeroAmount)
                   accounts)
-    { Account = accountTree.Name.[0].Input //XXX: Ugh, I can't believe I keep doing this. There has to be a better way.......
+    { Account = InputName (accountTree.Name.[0].Input.Entity, Text.fmt accountTree.Name) //XXX: Ugh, I can't believe I keep doing this. There has to be a better way.......
       Amounts =
           { Differences = (differences balances) }
       SubAccounts =
@@ -69,7 +69,7 @@ let rec constructReportProfitAndLossLine (accounts : Account option List) (accou
                 (constructReportProfitAndLossLine [ for a in accounts -> (extractSubAccount a child.Name) ] child) ]
       Postings = accountTree.Postings }
 
-let addLine (name: InputNameAccount) (accounts: DatedAccounts) (dates: Date list) linesSoFar =
+let addLine (accounts: DatedAccounts) (dates: Date list) (name: InputNameAccount) linesSoFar =
     let lastDate = (List.max dates)
     let finalAccounts = accounts.[lastDate] in
     match finalAccounts.find(name)  with
@@ -80,9 +80,16 @@ let addLine (name: InputNameAccount) (accounts: DatedAccounts) (dates: Date list
 
 let generateReport (input: InputFile) (dates: Date list)  =
     let datedAccounts = (accountsByDate input dates)
+    let addLine = addLine datedAccounts dates
+    let lines = [for account in datedAccounts.[dates|>List.max].Accounts -> account.Value.FullInputName]
+                |> List.filter (fun x -> 
+                                   let accountType = accountType x
+                                   (accountType = Income || accountType = Expense))
+                |> List.sortBy (fun x -> x.Entity.AsString)
+                |> List.fold (fun (acc:Line list) (elem:InputNameAccount) -> 
+                    addLine(elem) acc) []
     {Dates = dates;
-     Lines = (addLine (InputName(TEMPENTITY, "Income")) datedAccounts dates
-             (addLine (InputName(TEMPENTITY, "Expenses")) datedAccounts dates []))}
+     Lines = lines}
 
 let rec printReportLine indent (line : Line) =
     for difference in line.Amounts.Differences do

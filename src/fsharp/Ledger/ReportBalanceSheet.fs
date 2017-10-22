@@ -56,7 +56,7 @@ let rec constructReportBalanceSheetLine (accounts : Account option List) (accoun
                         | Some account -> account.Balance
                         | None -> zeroAmount)
                   accounts)
-    { Account = (toInputName accountTree.Name)
+    { Account =  InputName (accountTree.Name.[0].Input.Entity, Text.fmt accountTree.Name) //XXX: Ugh, I can't believe I keep doing this. There has to be a better way.......
       Amounts =
           { Balances = balances }
       SubAccounts =
@@ -64,7 +64,7 @@ let rec constructReportBalanceSheetLine (accounts : Account option List) (accoun
                 (constructReportBalanceSheetLine [ for a in accounts -> (extractSubAccount a child.Name) ] child) ]
       Postings = accountTree.Postings }
 
-let addLine (name: InputNameAccount) (accounts: DatedAccounts) (dates: Date list) (linesSoFar : List<Line>) =
+let addLine (accounts: DatedAccounts) (dates: Date list) (name: InputNameAccount) linesSoFar =
     let lastDate = (List.max dates)
     let finalAccounts = accounts.[lastDate] in
     match finalAccounts.find(name)  with
@@ -78,10 +78,13 @@ let addLine (name: InputNameAccount) (accounts: DatedAccounts) (dates: Date list
 
 let generateReport (input: InputFile) (dates: Date list)  =
     let datedAccounts = (accountsByDate input dates)
-    { Dates = dates;
-      Lines = (addLine (InputName(Default, "Assets")) datedAccounts dates
-              (addLine (InputName(Default, "Liabilities")) datedAccounts dates
-              (addLine (InputName(Default, "Equity")) datedAccounts dates [])))}
+    let addLine = addLine datedAccounts dates
+    let lines = [for account in datedAccounts.[dates|>List.max].Accounts -> account.Value.FullInputName]
+                |> List.sortBy (fun x -> x.Entity.AsString)
+                |> List.fold (fun (acc:Line list) (elem:InputNameAccount) -> 
+                                addLine(elem) acc) []
+    {Dates = dates;
+     Lines = lines}
 
 let rec printReportLine indent (line : Line) =
     for balance in line.Amounts.Balances do
